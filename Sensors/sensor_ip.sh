@@ -1,0 +1,26 @@
+#!/bin/bash
+## Environment Variables
+# Computers
+PI_STATIC_IP=192.168.68.40
+JETSON_STATIC_IP=192.168.68.45
+
+# LiDARs
+LIDAR_STATIC_IP_TOP=192.168.68.50
+LIDAR_STATIC_IP_LEFT=192.168.68.51
+LIDAR_STATIC_IP_RIGHT=192.168.68.52
+LIDAR_STATIC_IP_FRONT=192.168.68.53
+LIDAR_STATIC_IP_BACK=192.168.68.54
+
+# Cameras
+CAMERA_STATIC_IP_FL=192.168.68.60 # Front Left
+CAMERA_STATIC_IP_LEFT=192.168.68.61
+CAMERA_STATIC_IP_RIGHT=192.168.68.62
+CAMERA_STATIC_IP_FR=192.168.68.63 # Front Right
+CAMERA_STATIC_IP_Back=192.168.68.64
+
+# Aliases
+alias pi="ssh yride@piyride"
+alias pistatic="ssh yride@${PI_STATIC_IP}"
+
+alias jetson="ssh yride@jetsonyride"
+alias jetsonstatic="ssh yride@${JETSON_STATIC_IP}"

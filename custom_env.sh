@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # List of relative paths to .sh files to source
 SCRIPTS_LIST=(
     "Docker/compose_alias.sh"
-    "Ros2/clean_colcon_build_install.sh"
+    # "Ros2/clean_colcon_build_install.sh"
 )
 
 # Loop through the list and source each script

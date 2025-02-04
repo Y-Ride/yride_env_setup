@@ -24,5 +24,8 @@ fi
 # Append the source command to .bashrc
 echo -e "\nsource \"$CUSTOM_ENV\"" >> "$BASHRC"
 
+# Sources .bashrc
+source "$BASHRC"
+
 # Confirm success
 echo "Added source command for custom_env.sh to .bashrc"

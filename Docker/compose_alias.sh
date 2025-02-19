@@ -22,14 +22,26 @@ compose() {
     # If exactly one file is found, print it and proceed with the compose command
     echo "Using file: ${files[0]}"
 
-    if [ "$1" == "up" ]; then
-        shift
-        docker compose -f "${files[0]}" up -d "$@"
-        set_container_name "${files[0]}"
-        docker exec -it $CONTAINER_NAME bash
-    elif [ "$1" == "down" ]; then
-        shift
-        docker compose -f "${files[0]}" down "$@"
+    local interactive=0
+    local compose_args=()
+
+    # Process arguments
+    for arg in "$@"; do
+        if [ "$arg" == "-it" ]; then
+            interactive=1
+        else
+            compose_args+=("$arg")
+        fi
+    done
+
+    if [ "${compose_args[0]}" == "up" ]; then
+        docker compose -f "${files[0]}" up -d "${compose_args[@]:1}"
+        if [ "$interactive" -eq 1 ]; then
+            set_container_name "${files[0]}"
+            docker exec -it $CONTAINER_NAME bash
+        fi
+    elif [ "${compose_args[0]}" == "down" ]; then
+        docker compose -f "${files[0]}" down "${compose_args[@]:1}"
     else
         echo "Invalid option. Use 'compose up' or 'compose down'."
     fi

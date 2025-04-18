@@ -10,6 +10,7 @@ SCRIPTS_LIST=(
     "Docker/interactive_terminal_alias.sh"
     "Ros2/ros2_build_clean.sh"
     "Sensors/sensor_ip.sh"
+    "Other/random_alias.sh"
 )
 
 # Loop through the list and source each script

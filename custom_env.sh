@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # List of relative paths to .sh files to source
 SCRIPTS_LIST=(
     "Docker/compose_alias.sh"
-    "Docker/other_alias.sh"
     "Docker/interactive_terminal_alias.sh"
     "Ros2/ros2_build_clean.sh"
+    "Ros2/other_alias.sh"
     "Sensors/sensor_ip.sh"
     "Other/random_alias.sh"
 )

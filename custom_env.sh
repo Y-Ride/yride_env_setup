@@ -11,6 +11,7 @@ SCRIPTS_LIST=(
     "Ros2/other_alias.sh"
     "Sensors/sensor_ip.sh"
     "Other/random_alias.sh"
+    "Other/hostname_colors.sh"
 )
 
 # Loop through the list and source each script

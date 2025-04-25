@@ -18,7 +18,7 @@ elif [ "$HOSTNAME" = "jetsonyride" ]; then
     HOST_NAME_COLOR=33 # Yellow
 fi
 
-FIRST_NAME=$USER
+FIRST_NAME="$USER"
 if [ "$FIRST_NAME" = "benboyack" ]; then
     FIRST_NAME="beast"
 fi

@@ -8,7 +8,7 @@ SCRIPTS_LIST=(
     "Docker/compose_alias.sh"
     "Docker/interactive_terminal_alias.sh"
     "Ros2/ros2_build_clean.sh"
-    "Ros2/other_alias.sh"
+    "Ros2/echo_timestamp.sh"
     "Sensors/sensor_ip.sh"
     "Other/random_alias.sh"
     "Other/hostname_colors.sh"

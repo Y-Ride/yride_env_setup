@@ -1,6 +1,6 @@
 #!/bin/bash
 
-alias chownme='sudo chown -R $(whoami) $(pwd)'
+alias chownme='sudo chown -R $(whoami):$(whoami) $(pwd)'
 alias c='clear'
 alias findlidar='avahi-browse -lrt _roger._tcp'
 

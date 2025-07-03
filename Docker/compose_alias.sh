@@ -16,11 +16,27 @@ compose() {
         return 1
     elif [ "$file_count" -eq 0 ]; then
         echo "Error: No file matches the pattern ${COMPOSE_FILE}."
-        return 1
+        echo "Searching for docker directory..."
+        if [ -d "docker" ]; then
+            cd docker
+            echo "Found docker directory. Searching for compose file..."
+            files=($(ls ${COMPOSE_FILE} 2>/dev/null))
+            file_count=${#files[@]}
+            if [ "$file_count" -gt 1 ]; then
+                echo "Error: More than one file matches the pattern ${COMPOSE_FILE}."
+                return 1
+            elif [ "$file_count" -eq 0 ]; then
+                echo "Error: No file matches the pattern ${COMPOSE_FILE}."
+                return 1
+            else
+                echo "Using file: docker/${files[0]}"
+            fi
+        fi
+    else
+        # If exactly one file is found, print it and proceed with the compose command
+        echo "Using file: ${files[0]}"
     fi
 
-    # If exactly one file is found, print it and proceed with the compose command
-    echo "Using file: ${files[0]}"
 
     local interactive=0
     local compose_args=()

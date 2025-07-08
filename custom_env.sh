@@ -9,6 +9,7 @@ SCRIPTS_LIST=(
     "Docker/interactive_terminal_alias.sh"
     "Ros2/ros2_build_clean.sh"
     "Ros2/echo_timestamp.sh"
+    "Ros2/bag_alias.sh"
     "Sensors/sensor_ip.sh"
     "Other/random_alias.sh"
     "Other/hostname_colors.sh"

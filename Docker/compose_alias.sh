@@ -7,6 +7,32 @@ COMPOSE_FILE=*compose.yaml
 
 # Function for compose up with timing
 compose() {
+    local original_dir=$(pwd)
+
+    # Determine the base directory for the project name
+    local project_base_dir=""
+    if [[ $(basename "$PWD") == "docker" ]]; then
+        # If currently in a 'docker' directory, use its parent as the project base
+        project_base_dir=$(basename "$(dirname "$PWD")")
+    else
+        # Otherwise, use the current directory as the project base
+        project_base_dir=$(basename "$PWD")
+    fi
+
+    # Sanitize the project_base_dir to meet Docker Compose naming requirements
+    # 1. Convert to lowercase
+    project_base_dir=$(echo "$project_base_dir" | tr '[:upper:]' '[:lower:]')
+    # 2. Replace any character that is not a lowercase letter, number, hyphen, or underscore with a hyphen
+    project_base_dir=$(echo "$project_base_dir" | sed -r 's/[^a-z0-9_-]+/-/g')
+    # 3. Remove leading/trailing hyphens
+    project_base_dir=$(echo "$project_base_dir" | sed -r 's/^-+|-+$//g')
+    # 4. Ensure it starts with an alphanumeric character (if it somehow became empty or started with a hyphen)
+    #    This step is mostly defensive; directory names usually start with valid characters.
+    if [[ -z "$project_base_dir" || ! "$project_base_dir" =~ ^[a-z0-9] ]]; then
+        project_base_dir="docker-project" # Fallback if sanitization results in an invalid name
+    fi
+
+    
     # Check if there is more than one file matching the pattern
     local files=($(ls ${COMPOSE_FILE} 2>/dev/null))
     local file_count=${#files[@]}
@@ -15,8 +41,8 @@ compose() {
         echo "Error: More than one file matches the pattern ${COMPOSE_FILE}."
         return 1
     elif [ "$file_count" -eq 0 ]; then
-        echo "Error: No file matches the pattern ${COMPOSE_FILE}."
-        echo "Searching for docker directory..."
+        echo "Warn: No file matches the pattern ${COMPOSE_FILE}."
+        echo "      Searching for docker directory..."
         if [ -d "docker" ]; then
             cd docker
             echo "Found docker directory. Searching for compose file..."
@@ -37,6 +63,7 @@ compose() {
         echo "Using file: ${files[0]}"
     fi
 
+    echo "Project name will be set to \"${project_base_dir}\""
 
     local interactive=0
     local compose_args=()
@@ -50,17 +77,22 @@ compose() {
         fi
     done
 
+    # Add the -p flag with the determined project name
+    local project_name_flag="-p ${project_base_dir}"
+
     if [ "${compose_args[0]}" == "up" ]; then
-        docker compose -f "${files[0]}" up -d "${compose_args[@]:1}"
+        docker compose -f "${files[0]}" ${project_name_flag} up -d "${compose_args[@]:1}"
         if [ "$interactive" -eq 1 ]; then
             set_container_name "${files[0]}"
             docker exec -it $CONTAINER_NAME bash
         fi
     elif [ "${compose_args[0]}" == "down" ]; then
-        docker compose -f "${files[0]}" down "${compose_args[@]:1}"
+        docker compose -f "${files[0]}" ${project_name_flag} down "${compose_args[@]:1}"
     else
         echo "Invalid option. Use 'compose up' or 'compose down'."
     fi
+
+    cd "$original_dir" # Always go back to the original directory
 }
 
 set_container_name() {

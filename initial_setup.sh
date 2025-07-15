@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CUSTOM_ENV="$SCRIPT_DIR/custom_env.sh"
 
 # Path to the .bashrc file
-BASHRC="$HOME/.bashrc"
+BASHRC="${HOME}/.bashrc"
 
 # Check if custom_env.sh exists
 if [[ ! -f "$CUSTOM_ENV" ]]; then
@@ -24,8 +24,6 @@ fi
 # Append the source command to .bashrc
 echo -e "\nsource \"$CUSTOM_ENV\"" >> "$BASHRC"
 
-# Sources .bashrc
-source "$BASHRC"
-
 # Confirm success
 echo "Added source command for custom_env.sh to .bashrc"
+echo "Run 'source ~/.bashrc' or restart your terminal to apply changes"

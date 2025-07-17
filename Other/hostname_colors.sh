@@ -19,7 +19,7 @@ elif [ "$HOSTNAME" = "jetsonyride" ]; then
 fi
 
 FIRST_NAME="$USER"
-if [ "$FIRST_NAME" = "benboyack" ]; then
+if [ "$FIRST_NAME" = "benb" ]; then
     FIRST_NAME="beast"
 fi
 

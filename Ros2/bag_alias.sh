@@ -143,8 +143,37 @@ record_bag() {
     # Execute the command. Using "${command_args[@]}" ensures proper word splitting
     # and quoting of arguments, preventing issues with spaces in topic names or paths.
     ros2 bag record "${command_args[@]}"
+
+    # Copy log files if hostname is 'jetsonyride' ***
+    if [ "$(hostname)" = "jetsonyride" ]; then
+        echo "Copying log files..."
+
+        local bag_folder=""
+        if [ -n "$output_path" ]; then
+            bag_folder="$output_path"
+        else
+            # If no output path was specified, ros2 bag record will create a folder
+            # with a timestamp. We need to find the latest created bag folder.
+            # This assumes that the script is run in the directory where bag files are created.
+            bag_folder=$(ls -td | head -1)
+            echo "No explicit output path given. Assuming bag folder is: $bag_folder"
+        fi
+
+        if [ -d "$bag_folder" ]; then
+            echo "Copying /docker_yride/ros2_ws/src/log_ouster to $bag_folder..."
+            cp -r /docker_yride/ros2_ws/scripts/log_ouster "$bag_folder/"
+
+            echo "Copying /docker_yride/ros2_ws/src/log_emlid to $bag_folder..."
+            cp -r /docker_yride/ros2_ws/src/log_emlid "$bag_folder/"
+
+            echo "Copying log_imu from piyride to $bag_folder..."
+            scp -r yride@192.168.68.40:/home/yride/imu_ros2_IS/log_imu "$bag_folder/"
+            echo "Log file copying complete."
+        else
+            echo "Error: Bag folder '$bag_folder' not found. Cannot copy log files." >&2
+        fi
+    fi
 }
 
-# Export the function so it can be used in the current shell session
-# after sourcing this script (e.g., 'source your_script_name.sh').
+# Export the function so it can be...
 export -f record_bag

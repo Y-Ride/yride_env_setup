@@ -23,13 +23,14 @@ show_help() {
     echo "  -b                     Record Ouster Back topics ($OUSTER_BACK_TOPICS)"
     echo "  --all-topics           Record all currently advertised topics (equivalent to 'ros2 bag record -a')"
     echo "  --all-custom           Record all custom-defined topics (all Ouster, Inertial Sense, and Other topics)"
+    echo "  --other-only           Record all topic specified in INERTIAL_SENSE_TOPICS and OTHER_TOPICS"
     echo "  -o <file_path>         Specify the output path for the bag file"
     echo "  -h, --help             Display this help message and exit"
     echo ""
-    echo "Note: Inertial Sense topics ($INERTIAL_SENSE_TOPICS)"
-    echo "      and Other topics ($OTHER_TOPICS)"
+    echo "Note: INERTIAL_SENSE_TOPICS ($INERTIAL_SENSE_TOPICS)"
+    echo "      and OTHER_TOPICS ($OTHER_TOPICS)"
     echo "      are included by default when individual Ouster flags (-f, -r, -l, -t, -b) are used."
-    echo "      They are also included with --all-custom."
+    echo "      They are also included with --all-custom and --other-only."
 }
 
 # Function to record topics based on flags
@@ -38,11 +39,12 @@ record_bag() {
     local output_path=""
     local all_topics_flag=false # Flag to indicate if --all-topics was used (ros2 bag record -a)
     local all_custom_flag=false # Flag to indicate if --all-custom was used (all defined topics)
+    local other_only_flag=false # Flag to indicate if --other-only was used
 
     # Parse options using 'getopt' for both short and long options.
     # Added 'h' to short options and 'help' to long options.
     local parsed_options
-    parsed_options=$(getopt -o frltbo:h --long all-topics,all-custom,help -n 'record_bag' -- "$@")
+    parsed_options=$(getopt -o frltbo:h --long all-topics,all-custom,other-only,help -n 'record_bag' -- "$@")
 
     # Check if getopt encountered any parsing errors.
     if [ $? -ne 0 ]; then
@@ -89,6 +91,10 @@ record_bag() {
                 all_custom_flag=true
                 shift
                 ;;
+            --other-only) # Only topics in INERTIAL_SENSE_TOPICS and OTHER_TOPICS
+                other_only_flag=true
+                shift
+                ;;
             -h|--help) # Display help message
                 show_help
                 return 0 # Exit successfully after showing help
@@ -114,12 +120,12 @@ record_bag() {
         # If --all-custom is specified, we explicitly list all defined topics.
         topics=($OUSTER_FRONT_TOPICS $OUSTER_RIGHT_TOPICS $OUSTER_LEFT_TOPICS $OUSTER_TOP_TOPICS $OUSTER_BACK_TOPICS $INERTIAL_SENSE_TOPICS $OTHER_TOPICS)
         command_args+=("${topics[@]}")
-    else
-        # If neither 'all' flag is used, add inertial_sense and other_topics
-        # to the list of individually selected Ouster topics.
-        topics+=($INERTIAL_SENSE_TOPICS)
+    elif $other_only_flag; then
+        # If --other-ony is specified, we only include the 'other' and 'inertial sense' topics.
+        topics=($INERTIAL_SENSE_TOPICS)
         topics+=($OTHER_TOPICS)
-        
+        command_args+=("${topics[@]}")
+    else
         # If no topics were selected at all (either individually or via 'all' flags),
         # print the usage message.
         if [ ${#topics[@]} -eq 0 ]; then
@@ -127,6 +133,12 @@ record_bag() {
             show_help # Show help if no topics are selected
             return 1
         fi
+
+        # If neither 'all' flag is used, add inertial_sense and other_topics
+        # to the list of individually selected Ouster topics.
+        topics=($INERTIAL_SENSE_TOPICS)
+        topics+=($OTHER_TOPICS)
+
         command_args+=("${topics[@]}")
     fi
 
@@ -175,5 +187,32 @@ record_bag() {
     fi
 }
 
+_record_bag() {
+    local cur prev opts base
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    # Define the options that your script accepts
+    opts="-t -l -r -f -b --all-topics --all-custom --other-only -o -h --help"
+
+    # Handle completion for options
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+        return 0
+    fi
+
+    # Handle completion for the argument of the -o option
+    if [[ "$prev" == "-o" ]]; then
+        _filedir
+        return 0
+    fi
+
+    # Default completion (e.g., if no specific completion is defined for an argument)
+    COMPREPLY=( $(compgen -f -- "${cur}") )
+}
+
+
 # Export the function so it can be...
 export -f record_bag
+complete -F _record_bag record_bag

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEBUG=false
+
 # Allow xhost access to the container
 # xhost +local:docker # run this in launch file instead and remove at end of launch file
 
@@ -41,11 +43,15 @@ compose() {
         echo "Error: More than one file matches the pattern ${COMPOSE_FILE}."
         return 1
     elif [ "$file_count" -eq 0 ]; then
-        echo "Warn: No file matches the pattern ${COMPOSE_FILE}."
-        echo "      Searching for docker directory..."
+        if [ "$DEBUG" = true ]; then
+            echo "Warn: No file matches the pattern ${COMPOSE_FILE}."
+            echo "      Searching for docker directory..."
+        fi
         if [ -d "docker" ]; then
             cd docker
-            echo "Found docker directory. Searching for compose file..."
+            if [ "$DEBUG" = true ]; then
+                echo "Found docker directory. Searching for compose file..."
+            fi
             files=($(ls ${COMPOSE_FILE} 2>/dev/null))
             file_count=${#files[@]}
             if [ "$file_count" -gt 1 ]; then
@@ -63,7 +69,9 @@ compose() {
         echo "Using file: ${files[0]}"
     fi
 
-    echo "Project name will be set to \"${project_base_dir}\""
+    if [ "$DEBUG" = true ]; then
+        echo "Project name is set to \"${project_base_dir}\""
+    fi
 
     local interactive=0
     local compose_args=()
@@ -120,9 +128,6 @@ set_container_name() {
     # Set the environment variable
     export CONTAINER_NAME="$CONTAINER_NAME"
     echo "CONTAINER_NAME is set to: $CONTAINER_NAME"
-
-    # # Optionally, save it to your shell environment
-    # echo "export CONTAINER_NAME=$CONTAINER_NAME" >> ~/.bashrc
 
 }
 

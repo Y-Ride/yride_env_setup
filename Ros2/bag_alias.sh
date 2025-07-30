@@ -25,6 +25,7 @@ show_help() {
     echo "  --all-custom           Record all custom-defined topics (all Ouster, Inertial Sense, and Other topics)"
     echo "  --other-only           Record all topic specified in INERTIAL_SENSE_TOPICS and OTHER_TOPICS"
     echo "  -o <file_path>         Specify the output path for the bag file"
+    echo "  --no-topic-monitor     Disable topic synchronization check before playing the bag"
     echo "  -h, --help             Display this help message and exit"
     echo ""
     echo "Note: INERTIAL_SENSE_TOPICS ($INERTIAL_SENSE_TOPICS)"
@@ -40,11 +41,12 @@ record_bag() {
     local all_topics_flag=false # Flag to indicate if --all-topics was used (ros2 bag record -a)
     local all_custom_flag=false # Flag to indicate if --all-custom was used (all defined topics)
     local other_only_flag=false # Flag to indicate if --other-only was used
+    local topic_monitor_flag=true # Flag to indicate to check for topic synchronization
 
     # Parse options using 'getopt' for both short and long options.
     # Added 'h' to short options and 'help' to long options.
     local parsed_options
-    parsed_options=$(getopt -o frltbo:h --long all-topics,all-custom,other-only,help -n 'record_bag' -- "$@")
+    parsed_options=$(getopt -o frltbo:h --long all-topics,all-custom,other-only,no-topic-monitor,help -n 'record_bag' -- "$@")
 
     # Check if getopt encountered any parsing errors.
     if [ $? -ne 0 ]; then
@@ -93,6 +95,10 @@ record_bag() {
                 ;;
             --other-only) # Only topics in INERTIAL_SENSE_TOPICS and OTHER_TOPICS
                 other_only_flag=true
+                shift
+                ;;
+            --no-topic-monitor) # Disable the topic monitoring for when not running on golfcart
+                topic_monitor_flag=false
                 shift
                 ;;
             -h|--help) # Display help message
@@ -147,6 +153,22 @@ record_bag() {
         command_args+=("-o" "$output_path")
     fi
 
+    if $topic_monitor_flag; then 
+        ros2 run topic_monitor topic_monitor_node
+
+        # After the node finishes, ask the user whether to continue
+        read -p "Do you want to continue? [Y/n]: " user_input
+        user_input=${user_input:-y}  # Default to 'y' if empty
+
+        # Convert input to lowercase
+        user_input=$(echo "$user_input" | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$user_input" == "n" || "$user_input" == "no" ]]; then
+            echo "Exiting script."
+            exit 0
+        fi
+    fi
+
     # Construct the full 'ros2 bag record' command.
     local command="ros2 bag record ${command_args[@]}"
     
@@ -171,15 +193,26 @@ record_bag() {
             echo "No explicit output path given. Assuming bag folder is: $bag_folder"
         fi
 
-        if [ -d "$bag_folder" ]; then
-            echo "Copying /docker_yride/ros2_ws/src/log_ouster to $bag_folder..."
-            cp -r /docker_yride/ros2_ws/scripts/log_ouster "$bag_folder/"
+        local log_ouster_folder="/docker_yride/ros2_ws/scripts/log_ouster"
+        local log_emlid_folder="/docker_yride/ros2_ws/src/log_emlid"
+        local log_imu_folder="/home/yride/imu_ros2_IS/log_imu"
 
-            echo "Copying /docker_yride/ros2_ws/src/log_emlid to $bag_folder..."
-            cp -r /docker_yride/ros2_ws/src/log_emlid "$bag_folder/"
+        if [ -d "$bag_folder" ]; then
+            echo "Copying $log_ouster_folder to $bag_folder..."
+            if ! cp -r "$log_ouster_folder" "$bag_folder/"; then
+                echo -e "\e[31mERROR:\e[0m Didn't copy $log_ouster_folder correctly"
+            fi
+
+            echo "Copying $log_emlid_folder to $bag_folder..."
+            if ! cp -r "$log_emlid_folder" "$bag_folder/"; then
+                echo -e "\e[31mERROR:\e[0m Didn't copy $log_emlid_folder correctly"
+            fi
 
             echo "Copying log_imu from piyride to $bag_folder..."
-            scp -r yride@192.168.68.40:/home/yride/imu_ros2_IS/log_imu "$bag_folder/"
+            if ! sshpass -p 'knightryder' scp -o StrictHostKeyChecking=no -r yride@192.168.68.40:"$log_imu_folder" "$bag_folder/"; then
+                echo -e "\e[31mERROR:\e[0m Didn't copy $log_imu_folder correctly from piyride"
+            fi
+
             echo "Log file copying complete."
         else
             echo "Error: Bag folder '$bag_folder' not found. Cannot copy log files." >&2
@@ -194,7 +227,7 @@ _record_bag() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     
     # Define the options that your script accepts
-    opts="-t -l -r -f -b --all-topics --all-custom --other-only -o -h --help"
+    opts="-t -l -r -f -b --all-topics --all-custom --other-only -o --no-topic-monitor -h --help"
 
     # Handle completion for options
     if [[ "$cur" == -* ]]; then

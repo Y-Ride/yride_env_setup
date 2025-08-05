@@ -165,7 +165,7 @@ record_bag() {
 
         if [[ "$user_input" == "n" || "$user_input" == "no" ]]; then
             echo "Exiting script."
-            exit 0
+            return 0
         fi
     fi
 

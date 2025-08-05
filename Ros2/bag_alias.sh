@@ -209,7 +209,7 @@ record_bag() {
             fi
 
             echo "Copying log_imu from piyride to $bag_folder..."
-            if ! sshpass -p 'knightryder' scp -o StrictHostKeyChecking=no -r yride@192.168.68.40:"$log_imu_folder" "$bag_folder/"; then
+            if ! sshpass -p "${PI_PASS}" scp -o StrictHostKeyChecking=no -r yride@192.168.68.40:"$log_imu_folder" "$bag_folder/"; then
                 echo -e "\e[31mERROR:\e[0m Didn't copy $log_imu_folder correctly from piyride"
             fi
 

@@ -24,6 +24,13 @@ fi
 # Append the source command to .bashrc
 echo -e "\nsource \"$CUSTOM_ENV\"" >> "$BASHRC"
 
+# Set up needed virtual python environment
+echo "Setting up python3 virtual environment for pcd visualization..."
+python3 -m venv "${SCRIPT_DIR}/PCD/.venv"
+source "${SCRIPT_DIR}/PCD/.venv/bin/activate"
+pip install open3d
+deactivate
+
 # Confirm success
 echo "Added source command for custom_env.sh to .bashrc"
 echo "Run 'source ~/.bashrc' or restart your terminal to apply changes"

@@ -8,8 +8,7 @@ DEBUG=false
 COMPOSE_FILE=*compose.yaml
 
 # Function for compose up with timing
-compose() {
-    local original_dir=$(pwd)
+compose() (
 
     # Determine the base directory for the project name
     local project_base_dir=""
@@ -99,9 +98,7 @@ compose() {
     else
         echo "Invalid option. Use 'compose up' or 'compose down'."
     fi
-
-    cd "$original_dir" # Always go back to the original directory
-}
+)
 
 set_container_name() {
     # Check if a Docker Compose file is provided

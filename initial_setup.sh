@@ -26,7 +26,13 @@ echo -e "\nsource \"$CUSTOM_ENV\"" >> "$BASHRC"
 
 # Set up needed virtual python environment
 echo "Setting up python3 virtual environment for pcd visualization..."
+echo "Running 'sudo apt install python3-venv -y'. Need sudo permissions."
+sudo apt install python3-venv -y 
 python3 -m venv "${SCRIPT_DIR}/PCD/.venv"
+if [[ ! -f "${SCRIPT_DIR}/PCD/.venv/bin/activate" ]]; then
+    echo "Error: virtual environment creation failed."
+    exit 1
+fi
 source "${SCRIPT_DIR}/PCD/.venv/bin/activate"
 pip install open3d
 deactivate

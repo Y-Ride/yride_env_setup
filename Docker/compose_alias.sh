@@ -72,6 +72,13 @@ compose() (
         echo "Project name is set to \"${project_base_dir}\""
     fi
 
+    local compose_files="-f ${files[0]}"
+    local compose_file_basename="${files[0]%.*}"
+    if [ -f "${compose_file_basename}.extra.yaml" ]; then
+        echo "${compose_file_basename}.extra.yaml found. Appending to compose file list"
+        compose_files+=" -f ${compose_file_basename}.extra.yaml"
+    fi
+
     local interactive=0
     local compose_args=()
 
@@ -88,13 +95,19 @@ compose() (
     local project_name_flag="-p ${project_base_dir}"
 
     if [ "${compose_args[0]}" == "up" ]; then
-        docker compose -f "${files[0]}" ${project_name_flag} up -d "${compose_args[@]:1}"
+        if $DEBUG ; then
+            echo "Running: docker compose ${compose_files} ${project_name_flag} up -d ${compose_args[@]:1}"
+        fi
+        docker compose ${compose_files} ${project_name_flag} up -d "${compose_args[@]:1}"
         if [ "$interactive" -eq 1 ]; then
             set_container_name "${files[0]}"
             docker exec -it $CONTAINER_NAME bash
         fi
     elif [ "${compose_args[0]}" == "down" ]; then
-        docker compose -f "${files[0]}" ${project_name_flag} down "${compose_args[@]:1}"
+        if $DEBUG ; then
+            echo "Running: docker compose ${compose_files} ${project_name_flag} down ${compose_args[@]:1}"
+        fi
+        docker compose ${compose_files} ${project_name_flag} down "${compose_args[@]:1}"
     else
         echo "Invalid option. Use 'compose up' or 'compose down'."
     fi

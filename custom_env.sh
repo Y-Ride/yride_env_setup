@@ -7,12 +7,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_LIST=(
     "Docker/compose_alias.sh"
     "Docker/interactive_terminal_alias.sh"
-    "Other/random_alias.sh"
     "Other/hostname_colors.sh"
+    "Other/random_alias.sh"
+    "Other/rotation_matrix.sh"
     "PCD/pcd_tools.sh"
-    "Ros2/ros2_build_clean.sh"
-    "Ros2/echo_timestamp.sh"
     "Ros2/bag_alias.sh"
+    "Ros2/echo_timestamp.sh"
+    "Ros2/ros2_build_clean.sh"
     "Sensors/sensor_ip.sh"
 )
 

@@ -1,6 +1,11 @@
 #!/bin/bash
 
-alias chownme='sudo chown -R $(whoami):$(whoami) $(pwd)'
+chownme() {
+    local target="${1:-$(pwd)}"
+    echo "Running: sudo chown -R $(whoami):$(whoami) $target"
+    sudo chown -R "$(whoami):$(whoami)" "$target"
+}
+
 alias c='clear'
 alias findlidar='avahi-browse -lrt _roger._tcp'
 
@@ -14,3 +19,6 @@ if [[ $HOSTNAME = "jetsonyride" ]]; then
     # Download with this 'sudo pip3 install jetson-stats' and then reboot
     alias nvidia-smi="echo \"Running 'jtop'\" && jtop"
 fi
+
+# Set tab completion to be case insensitive
+bind 'set completion-ignore-case on'

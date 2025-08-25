@@ -3,23 +3,25 @@
 ccbi() {
     # pushd "$(dirname "$(realpath $0)")" > /dev/null
 
-    clear
-
     local symlink_install=0
     local packages_select=()
     local option
+    local no_clear_flag=false
 
     symlink_install=0
     packages_select=()
     OPTIND=1 # Reset in case getopts has been used previously in the shell.
 
-    while getopts "sp:" option; do
+    while getopts "sp:n" option; do
         case "$option" in
         s)
             symlink_install=1
             ;;
         p)
             packages_select+=("$OPTARG")
+            ;;
+        n)
+            no_clear_flag=true
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -30,6 +32,10 @@ ccbi() {
 
     # Remove parsed options from the argument list
     shift $((OPTIND - 1))
+
+    if ! $no_clear_flag ; then
+        clear
+    fi
 
     local colcon_cmd="colcon build"
 

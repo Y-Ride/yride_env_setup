@@ -42,6 +42,7 @@ record_bag() {
     local all_custom_flag=false # Flag to indicate if --all-custom was used (all defined topics)
     local other_only_flag=false # Flag to indicate if --other-only was used
     local topic_monitor_flag=true # Flag to indicate to check for topic synchronization
+    local custom_name_flag=false
 
     # Parse options using 'getopt' for both short and long options.
     # Added 'h' to short options and 'help' to long options.
@@ -84,6 +85,7 @@ record_bag() {
             -o) # Output file path
                 output_path="$2"
                 shift 2 # Shift past the option and its argument
+                custom_name_flag=true
                 ;;
             --all-topics) # Use 'ros2 bag record -a' directly
                 all_topics_flag=true
@@ -151,6 +153,10 @@ record_bag() {
     # Add the output path argument if it was specified.
     if [ -n "$output_path" ]; then
         command_args+=("-o" "$output_path")
+    else
+        output_path=$(get_bag_name)
+        echo "Using automated bag name: $output_path"
+        command_args+=("-o" "$output_path")
     fi
 
     if $topic_monitor_flag; then 
@@ -193,8 +199,9 @@ record_bag() {
             echo "No explicit output path given. Assuming bag folder is: $bag_folder"
         fi
 
-        local log_ouster_folder="/docker_yride/ros2_ws/scripts/log_ouster"
-        local log_emlid_folder="/docker_yride/ros2_ws/src/log_emlid"
+        # Copy log files to bag folder
+        local log_ouster_folder="/root/ros2_ws/scripts/log_ouster"
+        local log_emlid_folder="/root/ros2_ws/src/emlid_gps/log_emlid"
         local log_imu_folder="/home/yride/imu_ros2_IS/log_imu"
 
         if [ -d "$bag_folder" ]; then
@@ -217,7 +224,96 @@ record_bag() {
         else
             echo "Error: Bag folder '$bag_folder' not found. Cannot copy log files." >&2
         fi
+
+        # Update field test table
+        if [ "$custom_name_flag" = false ]; then
+            read -p "Do you want to add a row to the field test table? [y]/n: " add_row_choice
+            add_row_choice=${add_row_choice:-y}  # default to 'y' if user just presses enter
+
+            if [ "$add_row_choice" = "y" ] || [ "$add_row_choice" = "Y" ]; then
+                local field_test_table_path="/root/golf_cart/log-+-notes.md"
+                echo "Recording completed. Adding entry to $field_test_table_path"
+
+                # Extract date and time
+                local bag_date=$(echo "$bag_folder" | awk -F'__' '{print $1}')   # "8_25_2025"
+                local bag_time=$(echo "$bag_folder" | awk -F'__' '{print $2}')  # "1114"
+
+                # Split date
+                local month=$(echo "$bag_date" | cut -d'_' -f1)
+                local day=$(echo "$bag_date" | cut -d'_' -f2)
+                local year=$(echo "$bag_date" | cut -d'_' -f3)
+
+                # Split time (first 2 chars = hour, last 2 chars = minute)
+                local hour=${bag_time:0:2}
+                local minute=${bag_time:2:2}
+                
+                local date_time_entry="${month}/${day}/${year}<br>${hour}:${minute}"
+                echo "bag_date: $bag_date, bag_time: $bag_time, month: $month, day: $day, year: $year, hour: $hour, minute: $minute"
+
+                # Get user input for Location and Notes
+                echo "Enter information for the following columns:"
+                read -p "Location: " location_entry
+                read -p "Notes: " notes_entry
+                
+                # Create the new table row
+                local new_row="<tr><td>${date_time_entry}</td><td>${location_entry}</td><td>${notes_entry}</td></tr>"
+
+                # Use sed to insert the new row before the </tbody> tag
+                # sed -i "/<\/tbody><\/table>/i$new_row" $field_test_table_path
+                sed -i "s|</tbody></table>|${new_row}&|" "$field_test_table_path"
+                echo "Log entry added successfully."
+            else
+                echo "Skipping field test table entry."
+            fi
+        else
+            echo "Manual name used. Skipping automated log entry."
+        fi
     fi
+}
+
+# Function to get a formatted timestamp rounded to the nearest 5 minutes
+# get_bag_name() {
+#     local date_time=$(date +"%_m/%_d/%_y")
+#     local hour=$(date +"%H")
+#     local minute=$(date +"%M")
+    
+#     # Calculate the rounded minute
+#     local rounded_minute=$(( (minute + 2) / 5 * 5 ))
+#     if [ "$rounded_minute" -eq 60 ]; then
+#         rounded_minute=0
+#         # Increment hour if minutes roll over
+#         hour=$((hour + 1))
+#     fi
+#     local formatted_minute=$(printf "%02d" $rounded_minute)
+
+#     # Re-calculate date and hour in case of rollover
+#     if [ "$hour" -eq 24 ]; then
+#         hour=0
+#         date_time=$(date -d "tomorrow" +"%_m/%_d/%_y")
+#     fi
+#     local formatted_hour=$(printf "%02d" $hour)
+
+#     local month=$(echo $date_time | cut -d'/' -f1)
+#     local day=$(echo $date_time | cut -d'/' -f2)
+#     local year=$(echo $date_time | cut -d'/' -f3)
+
+#     echo "${month}_${day}_${year}__${formatted_hour}${formatted_minute}"
+# }
+
+get_bag_name() {
+    # Set the timezone to Mountain Daylight Time (MDT)
+    local TZ='America/Denver'
+    
+    # Get the current time in seconds since the epoch in the specified timezone
+    local current_seconds=$(TZ="$TZ" date +%s)
+    
+    # Calculate the rounded time to the nearest 5 minutes
+    local rounded_seconds=$(( (current_seconds + 150) / 300 * 300 ))
+    
+    # Format the rounded timestamp to the desired string, using '-' to remove padding
+    local formatted_time=$(TZ="$TZ" date -d "@$rounded_seconds" +"%-m_%-d_%Y__%H%M")
+    
+    echo "$formatted_time"
 }
 
 _record_bag() {
@@ -236,7 +332,7 @@ _record_bag() {
     fi
 
     # Handle completion for the argument of the -o option
-    if [[ "$prev" == "-o" ]]; then
+    if [[ "$prev" == "-o" || "$prev" == "-n" || "$prev" == "--name" ]]; then
         _filedir
         return 0
     fi

@@ -250,10 +250,11 @@ record_bag() {
                 local minute=${bag_time:2:2}
                 
                 local date_time_entry="${month}/${day}/${year}<br>${hour}:${minute}"
-                echo "bag_date: $bag_date, bag_time: $bag_time, month: $month, day: $day, year: $year, hour: $hour, minute: $minute"
 
                 local bag_size=$(ros2 bag info "$bag_folder" 2>/dev/null | awk -F': ' '/Bag size/ {gsub(/^ +/, "", $2); sub(/ GiB$/, "", $2); print $2; exit}')
                 local bag_duration=$(ros2 bag info "$bag_folder" 2>/dev/null | awk -F': ' '/Duration/ {gsub(/^ +/, "", $2); sub(/s$/, "", $2); printf "%.1f\n", $2; exit}')
+
+                echo "bag_date: $bag_date, bag_time: $bag_time, bag_size: $bag_size, bag_duration: $bag_duration"
 
                 # Get user input for Location and Notes
                 echo "Enter information for the following columns:"
@@ -265,7 +266,7 @@ record_bag() {
 
                 # Use sed to insert the new row before the </tbody> tag
                 # sed -i "/<\/tbody><\/table>/i$new_row" $field_test_table_path
-                sed -i "s|</tbody></table>|${new_row}\n&|" "$field_test_table_path"
+                sed -i "/<\/tbody><\/table>/i ${new_row}" "$field_test_table_path"
                 echo "Log entry added successfully."
             else
                 echo "Skipping field test table entry."

@@ -5,7 +5,7 @@ DEBUG=false
 # Allow xhost access to the container
 # xhost +local:docker # run this in launch file instead and remove at end of launch file
 
-COMPOSE_FILE=*compose.yaml
+COMPOSE_FILE=*compose.y*ml
 
 # Function for compose up with timing
 compose() (

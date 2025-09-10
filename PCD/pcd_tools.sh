@@ -1,6 +1,7 @@
 #!/bin/bash
 
-pcd(){
+pcd()(
+    
     local SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
     local VIZ_FILE="${SCRIPT_DIR}/pcd_visualization.py"
     local OUTLIER_FILE="${SCRIPT_DIR}/pcd_outlier_removal.py"
@@ -35,19 +36,11 @@ pcd(){
         *)
             echo "Invalid option: Must be either '-v' for pcd_visualization.py or"
             echo "                or '-o' for pcd_outlier_removal.py"
-            _pcd_cleanup
             return 1
             ;;
     esac
 
-    ### Clean Up
-    _pcd_cleanup
-}
-
-_pcd_cleanup(){
-    # Deactivate python environment
-    deactivate
-}
+)
 
 check_if_pcd(){
     local path="$1"

@@ -223,6 +223,8 @@ record_bag() {
             echo "Log file copying complete."
         else
             echo "Error: Bag folder '$bag_folder' not found. Cannot copy log files." >&2
+            echo "Exiting now..."
+            return 1
         fi
 
         # Update field test table
@@ -232,7 +234,7 @@ record_bag() {
 
             if [ "$add_row_choice" = "y" ] || [ "$add_row_choice" = "Y" ]; then
                 local field_test_table_path="/root/golf_cart/log-+-notes.md"
-                echo "Recording completed. Adding entry to $field_test_table_path"
+                echo "Adding entry to $field_test_table_path"
 
                 # Extract date and time
                 local bag_date=$(echo "$bag_folder" | awk -F'__' '{print $1}')   # "8_25_2025"
@@ -250,17 +252,20 @@ record_bag() {
                 local date_time_entry="${month}/${day}/${year}<br>${hour}:${minute}"
                 echo "bag_date: $bag_date, bag_time: $bag_time, month: $month, day: $day, year: $year, hour: $hour, minute: $minute"
 
+                local bag_size=$(ros2 bag info "$bag_folder" 2>/dev/null | awk -F': ' '/Bag size/ {gsub(/^ +/, "", $2); sub(/ GiB$/, "", $2); print $2; exit}')
+                local bag_duration=$(ros2 bag info "$bag_folder" 2>/dev/null | awk -F': ' '/Duration/ {gsub(/^ +/, "", $2); sub(/s$/, "", $2); printf "%.1f\n", $2; exit}')
+
                 # Get user input for Location and Notes
                 echo "Enter information for the following columns:"
                 read -p "Location: " location_entry
                 read -p "Notes: " notes_entry
                 
                 # Create the new table row
-                local new_row="<tr><td>${date_time_entry}</td><td>${location_entry}</td><td>${notes_entry}</td></tr>"
+                local new_row="<tr><td>${date_time_entry}</td><td>${bag_size}</td><td>${bag_duration}></td><td>${location_entry}</td><td>${notes_entry}</td></tr>"
 
                 # Use sed to insert the new row before the </tbody> tag
                 # sed -i "/<\/tbody><\/table>/i$new_row" $field_test_table_path
-                sed -i "s|</tbody></table>|${new_row}&|" "$field_test_table_path"
+                sed -i "s|</tbody></table>|${new_row}\n&|" "$field_test_table_path"
                 echo "Log entry added successfully."
             else
                 echo "Skipping field test table entry."

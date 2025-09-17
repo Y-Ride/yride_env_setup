@@ -24,7 +24,8 @@ show_help() {
     echo "  --all-topics           Record all currently advertised topics (equivalent to 'ros2 bag record -a')"
     echo "  --all-custom           Record all custom-defined topics (all Ouster, Inertial Sense, and Other topics)"
     echo "  --other-only           Record all topic specified in INERTIAL_SENSE_TOPICS and OTHER_TOPICS"
-    echo "  -o <file_path>         Specify the output path for the bag file"
+    echo "  -o <file_path>         Specify the output path for the bag file. If this is not used, a bag"
+    ecoh "                           name will be automatically created with the format MM_DD_YYY"
     echo "  --no-topic-monitor     Disable topic synchronization check before playing the bag"
     echo "  -h, --help             Display this help message and exit"
     echo ""
@@ -317,7 +318,7 @@ get_bag_name() {
     local rounded_seconds=$(( (current_seconds + 150) / 300 * 300 ))
     
     # Format the rounded timestamp to the desired string, using '-' to remove padding
-    local formatted_time=$(TZ="$TZ" date -d "@$rounded_seconds" +"%-m_%-d_%Y__%H%M")
+    local formatted_time=$(TZ="$TZ" date -d "@$rounded_seconds" +"%m_%d_%Y__%H%M")
     
     echo "$formatted_time"
 }

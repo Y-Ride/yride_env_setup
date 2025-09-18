@@ -12,7 +12,7 @@ SCRIPTS_LIST=(
     "Other/rotation_matrix.sh"
     "PCD/pcd_tools.sh"
     "Ros2/bag_alias.sh"
-    "Ros2/echo_timestamp.sh"
+    "Ros2/echo_header_info.sh"
     "Ros2/ros2_build_clean.sh"
     "Sensors/sensor_ip.sh"
 )

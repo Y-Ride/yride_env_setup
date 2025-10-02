@@ -33,17 +33,18 @@ compose() (
         project_base_dir="docker-project" # Fallback if sanitization results in an invalid name
     fi
 
+    shopt -s nullglob
     
     # Check if there is more than one file matching the pattern
-    local files=($(ls ${COMPOSE_FILE} 2>/dev/null))
+    local files=(${COMPOSE_FILE})
     local file_count=${#files[@]}
 
     if [ "$file_count" -gt 1 ]; then
-        echo "Error: More than one file matches the pattern ${COMPOSE_FILE}."
+        echo "Error: More than one file matches the pattern '${COMPOSE_FILE}'."
         return 1
     elif [ "$file_count" -eq 0 ]; then
         if [ "$DEBUG" = true ]; then
-            echo "Warn: No file matches the pattern ${COMPOSE_FILE}."
+            echo "Warn: No file matches the pattern '${COMPOSE_FILE}'."
             echo "      Searching for docker directory..."
         fi
         if [ -d "docker" ]; then
@@ -51,32 +52,48 @@ compose() (
             if [ "$DEBUG" = true ]; then
                 echo "Found docker directory. Searching for compose file..."
             fi
-            files=($(ls ${COMPOSE_FILE} 2>/dev/null))
+            files=(${COMPOSE_FILE})
             file_count=${#files[@]}
             if [ "$file_count" -gt 1 ]; then
-                echo "Error: More than one file matches the pattern ${COMPOSE_FILE}."
+                echo "Error: More than one file matches the pattern '${COMPOSE_FILE}'."
                 return 1
             elif [ "$file_count" -eq 0 ]; then
-                echo "Error: No file matches the pattern ${COMPOSE_FILE}."
+                echo "Error: No file matches the pattern '${COMPOSE_FILE}'."
                 return 1
             else
-                echo "Using file: docker/${files[0]}"
+                echo "Using file: 'docker/${files[0]}'"
             fi
         fi
     else
         # If exactly one file is found, print it and proceed with the compose command
-        echo "Using file: ${files[0]}"
+        echo "Using file: '${files[0]}'"
     fi
 
     if [ "$DEBUG" = true ]; then
         echo "Project name is set to \"${project_base_dir}\""
     fi
 
-    local compose_files="-f ${files[0]}"
+    local compose_files=(-f "${files[0]}")
     local compose_file_basename="${files[0]%.*}"
-    if [ -f "${compose_file_basename}.extra.yaml" ]; then
-        echo "${compose_file_basename}.extra.yaml found. Appending to compose file list"
-        compose_files+=" -f ${compose_file_basename}.extra.yaml"
+
+    # Check if there is more than one file matching the pattern
+    local extra_files=(${compose_file_basename}.*.y*ml)
+    local extra_file_count=${#extra_files[@]}
+    # echo "Extra files: ${extra_files[@]}"
+    # echo "Extra file count: ${extra_file_count}"
+    if [[ "${extra_file_count}" -gt 0 ]]; then
+        for extra_file in "${extra_files[@]}"; do
+            if [ -f "${extra_file}" ]; then
+                check_for_device "$extra_file"
+                missing_count=$?
+                if [[ $missing_count -gt 0 ]]; then
+                    echo "'${extra_file}' skipped due to $missing_count missing device(s)"
+                    continue
+                fi
+                echo "'${extra_file}' found. Appending to compose file list"
+                compose_files+=(-f "${extra_file}")
+            fi
+        done
     fi
 
     local interactive=0
@@ -96,9 +113,9 @@ compose() (
 
     if [ "${compose_args[0]}" == "up" ]; then
         if $DEBUG ; then
-            echo "Running: docker compose ${compose_files} ${project_name_flag} up -d ${compose_args[@]:1}"
+            echo "Running: docker compose ${compose_files[*]} ${project_name_flag} up -d ${compose_args[@]:1}"
         fi
-        docker compose ${compose_files} ${project_name_flag} up -d "${compose_args[@]:1}"
+        docker compose "${compose_files[@]}" ${project_name_flag} up -d "${compose_args[@]:1}"
         if [ "$interactive" -eq 1 ]; then
             set_container_name "${files[0]}"
             docker exec -it $CONTAINER_NAME bash
@@ -112,6 +129,29 @@ compose() (
         echo "Invalid option. Use 'compose up' or 'compose down'."
     fi
 )
+
+check_for_device() {
+    local file="$1"
+    local missing=0
+
+    # Extract device mappings from the compose file
+    # Example line: - "/dev/ttyACM0:/dev/ttyACM0"
+    local devices
+    devices=$(grep -E '^\s*-\s*"/dev/' "$file" | sed -E 's/.*"(\/dev\/[^:]+).*/\1/')
+
+    if [ -z "$devices" ]; then
+        return 0
+    fi
+
+    for dev in $devices; do
+        if [ ! -e "$dev" ]; then
+            echo "⚠️  Device $dev listed in '$file' is not present on this system."
+            missing=$((missing+1))
+        fi
+    done
+
+    return $missing
+}
 
 set_container_name() {
     # Check if a Docker Compose file is provided
@@ -144,3 +184,4 @@ set_container_name() {
 # Export the function so it's available in the current shell session
 export -f compose
 export -f set_container_name
+export -f check_for_device

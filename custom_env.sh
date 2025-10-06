@@ -14,6 +14,7 @@ SCRIPTS_LIST=(
     "Ros2/bag_alias.sh"
     "Ros2/echo_header_info.sh"
     "Ros2/ros2_build_clean.sh"
+    "Sensors/restart_ouster_ptp.sh"
     "Sensors/sensor_ip.sh"
 )
 

@@ -1,6 +1,9 @@
 #!/bin/bash
 ## Environment Variables
 # Computers
+PI_HOSTNAME="piyride"
+JETSON_HOSTNAME="jetsonyride"
+
 export PI_STATIC_IP=192.168.68.40
 export JETSON_STATIC_IP=192.168.68.45
 

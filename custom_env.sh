@@ -16,6 +16,9 @@ SCRIPTS_LIST=(
     "Ros2/ros2_build_clean.sh"
     "Sensors/restart_ouster_ptp.sh"
     "Sensors/sensor_ip.sh"
+    "TimeSync/clock_ptp_check.sh"
+    "TimeSync/lidar_timestamps_check.sh"
+    # "TimeSync/time_sync_check.sh"
 )
 
 # Loop through the list and source each script

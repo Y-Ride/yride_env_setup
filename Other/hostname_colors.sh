@@ -10,6 +10,18 @@
 # Cyan	    36	        46
 # White	    37	        47
 
+# Colors for readability
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to log messages
+log() {
+    local level="$1"; shift
+    echo -e "${level}${*}${NC}"
+}
+
 
 HOST_NAME_COLOR=32 # Green default
 if [ "$HOSTNAME" = "piyride" ]; then

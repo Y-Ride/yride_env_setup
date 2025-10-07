@@ -2,21 +2,9 @@
 
 # set -euo pipefail
 
-# Colors for readability
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
 # Timeout (seconds) for checking connectivity
 PING_TIMEOUT=2
 CURL_TIMEOUT=3
-
-# Function to log messages
-log() {
-    local level="$1"; shift
-    echo -e "${level}${*}${NC}"
-}
 
 # Check if lidar is reachable
 check_for_lidar() {

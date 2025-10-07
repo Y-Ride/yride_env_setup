@@ -14,10 +14,11 @@ SCRIPTS_LIST=(
     "Ros2/bag_alias.sh"
     "Ros2/echo_header_info.sh"
     "Ros2/ros2_build_clean.sh"
+    "Sensors/restart_computer_ptp.sh"
     "Sensors/restart_ouster_ptp.sh"
     "Sensors/sensor_ip.sh"
-    "TimeSync/clock_ptp_check.sh"
-    "TimeSync/lidar_timestamps_check.sh"
+    "TimeSync/check_lidar_timesync.sh"
+    "TimeSync/check_ptp_clocks.sh"
     # "TimeSync/time_sync_check.sh"
 )
 

@@ -21,4 +21,6 @@ if [[ $HOSTNAME = "jetsonyride" ]]; then
 fi
 
 # Set tab completion to be case insensitive
-bind 'set completion-ignore-case on'
+if [[ $- == *i* ]]; then # Check to see if stdin is connected to a terminal
+    bind 'set completion-ignore-case on'
+fi

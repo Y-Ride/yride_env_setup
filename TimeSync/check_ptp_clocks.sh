@@ -3,22 +3,28 @@
 check_ptp_clocks_return_key() {
     echo "Key for check_ptp_clock return:"
     echo "  0 -> Clocks were already synchronized"
-    echo "  1 -> Clocks were not synchronized but now they are"
+    echo "  1 -> Clocks were not synchronized but should be now for pi, jetson, and lidars"
     echo "  2 -> Error: Clocks are not synchronized"
     echo "  3 -> PPS is not being read from GPS"
     echo "  4 -> No static IP connection to $PI_HOSTNAME"
 }
 
 check_ptp_clocks()
-(
+{
+    local ret=0
+    local count=1
+
     if [[ $HOSTNAME != $PI_HOSTNAME ]]; then
         echo "Connecting to $PI_HOSTNAME via SSH..."
-        ssh yride@$PI_STATIC_IP "bash -lc 'check_ptp_clocks'" || { echo "SSH connection failed."; return 4; }
-        return $?
+        ssh yride@$PI_STATIC_IP "bash -lc 'source ~/yride_env_setup/custom_env.sh; check_ptp_clocks'" || { echo "SSH connection failed."; return 4; }
+        ret=$?
+        if [[ $ret -eq 255 ]]; then
+            echo "SSH connection failed."
+            return 4
+        fi
+        return $ret
     fi
 
-    local count=1
-    local ret=0
     active_source=$(chronyc sources | awk '/^\#*\*/ {print $2}')
 
     if [[ "$active_source" == "PPS" ]]; then
@@ -26,8 +32,12 @@ check_ptp_clocks()
     else
         ret=3
         echo "❌ PPS is NOT active. Either no GPS is being received or there is another issue."
-        read -p "Proceed? [y/N]: " answer
-        answer=${answer:-n}
+        if [[ $- == *i* ]]; then # Check to see if terminal is interactive
+            read -p "Proceed? [y/N]: " answer
+            answer=${answer:-n}
+        else
+            answer=n
+        fi
 
         if [[ $answer != [Yy] ]]; then
             echo "Cancelled."
@@ -74,12 +84,27 @@ check_ptp_clocks()
             # THRESHOLD=37.0
         else
             echo "System and Hardware clocks are synchronized!"
-            echo "Offset is $offset ns"
+            echo "Offset is $offset s"
             break
         fi
     done
+
+    if [[ $ret -eq 1 ]]; then
+        echo "Clock sync failed AT LEAST once. "
+        echo "Resetting Jetson ptp, phc2shm, and chrony services..."
+
+        ssh yride@$JETSON_STATIC_IP "bash -c 'source ~/yride_env_setup/custom_env.sh; restart_computer_ptp'" || { echo "SSH to Jetson failed"; }
+
+        echo "Resetting services complete. "
+        echo "Resetting ouster lidar ptp..."
+        
+        restart_all_ouster_ptp
+
+        echo "Resetting lidar ptp complete."
+    fi
+
     return "$ret"
-)
+}
 
 
 # This condition is true if the script is executed, false if sourced

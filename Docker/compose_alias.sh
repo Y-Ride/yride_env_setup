@@ -108,26 +108,21 @@ compose() (
         fi
     done
 
+    if [[ "${compose_args[0]}" == "up" ]]; then
+        compose_args+=("-d")
+    fi
+
     # Add the -p flag with the determined project name
     local project_name_flag="-p ${project_base_dir}"
 
-    if [ "${compose_args[0]}" == "up" ]; then
-        if $DEBUG ; then
-            echo "Running: docker compose ${compose_files[*]} ${project_name_flag} up -d ${compose_args[@]:1}"
-        fi
-        docker compose "${compose_files[@]}" ${project_name_flag} up -d "${compose_args[@]:1}"
-        if [ "$interactive" -eq 1 ]; then
-            set_container_name "${files[0]}"
-            docker exec -it $CONTAINER_NAME bash
-        fi
-    elif [ "${compose_args[0]}" == "down" ]; then
-        if $DEBUG ; then
-            echo "Running: docker compose ${compose_files} ${project_name_flag} down ${compose_args[@]:1}"
-        fi
-        docker compose ${compose_files} ${project_name_flag} down "${compose_args[@]:1}"
-    else
-        echo "Invalid option. Use 'compose up' or 'compose down'."
+    if $DEBUG ; then
+        echo "Running: docker compose ${compose_files[*]} ${project_name_flag} ${compose_args[0]} ${compose_args[@]:1}"
     fi
+    docker compose "${compose_files[@]}" ${project_name_flag} ${compose_args[0]} "${compose_args[@]:1}"
+    if [[ "${compose_args[0]}" == "up" && "$interactive" -eq 1 ]]; then
+        set_container_name "${files[0]}"
+        docker exec -it $CONTAINER_NAME bash
+        fi
 )
 
 check_for_device() {

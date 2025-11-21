@@ -17,7 +17,7 @@ SCRIPTS_LIST=(
     "Sensors/restart_computer_ptp.sh"
     "Sensors/restart_ouster_ptp.sh"
     "Sensors/sensor_ip.sh"
-    "TimeSync/check_lidar_timesync.sh"
+    "TimeSync/check_timesync.sh"
     "TimeSync/check_ptp_clocks.sh"
     # "TimeSync/time_sync_check.sh"
 )

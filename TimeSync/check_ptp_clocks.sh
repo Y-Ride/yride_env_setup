@@ -4,7 +4,7 @@ check_ptp_clocks_return_key() {
     echo "Key for check_ptp_clock return:"
     echo "  0 -> Clocks were already synchronized"
     echo "  1 -> Clocks were not synchronized but should be now for pi, jetson, and lidars"
-    echo "  2 -> Error: Clocks are not synchronized"
+    echo "  2 -> Error: Clocks are not synchronized or couldn't read clocks"
     echo "  3 -> PPS is not being read from GPS"
     echo "  4 -> No static IP connection to $PI_HOSTNAME"
 }
@@ -51,22 +51,35 @@ check_ptp_clocks()
 
     
     while true; do
-        
 
+        # Parse PHC time safely
         phc_time=$(sudo phc_ctl /dev/ptp0 get | awk '/clock time/ {print $5}')
         sys_time=$(date +%s.%N)
 
-        diff=$(echo "$phc_time - $sys_time" | bc -l)
-        echo "PHC - System = $diff seconds"
-        # local offset=$(sudo phc_ctl /dev/ptp0 cmp | awk '{gsub(/ns$/,"",$NF); print $NF}')
-        offset=$(echo "$diff" | awk '{if($1<0) $1=-$1; print $1}')
+        # Protect against empty output
+        [[ -z "$phc_time" || -z "$sys_time" ]] && {
+            echo "ERROR: Failed to read PHC or system time."
+            return 2
+        }
 
-        if (( $(echo "$offset > $THRESHOLD" | bc -l) )); then
+        # Compute diff using awk only (awk supports floats natively)
+        diff=$(awk -v a="$phc_time" -v b="$sys_time" 'BEGIN{print a - b}')
+        echo "PHC - System = $diff seconds"
+
+        # Absolute offset (still pure awk)
+        offset=$(awk -v x="$diff" 'BEGIN{print (x<0? -x : x)}')
+        echo "Offset: $offset, Threshold: $THRESHOLD"
+
+        # Numerical comparison (no bc needed)
+        greater=$(awk -v o="$offset" -v t="$THRESHOLD" 'BEGIN{print (o > t)}')
+
+        if [[ "$greater" -eq 1 ]]; then
             echo "Offset too large! (threshold is $THRESHOLD)"
             if [[ "$count" -gt 5 ]]; then
-                echo "ERROR: Couldn't synchronize clocks after $((count -1)) attepts. Exiting"
+                echo "ERROR: Couldn't synchronize clocks after $((count - 1)) attempts. Exiting"
                 return 2
             fi
+
             echo "Attempt $count at restarting ptp and phc2sys services..."
             sudo systemctl daemon-reload
             sudo systemctl restart ptp4l@eth0.service phc2sys@eth0.service
@@ -74,14 +87,14 @@ check_ptp_clocks()
             echo "Service restart complete. Waiting ${sleep_duration} seconds and then will reverify time status..."
 
             for i in $(seq 1 $sleep_duration); do
-                # Print progress bar
-                printf "\r[%-${sleep_duration}s] %d/${sleep_duration}s %d%%" "$(head -c $i < /dev/zero | tr '\0' '-')" ${i} $(( i * 100 / sleep_duration ))
+                printf "\r[%-${sleep_duration}s] %d/${sleep_duration}s %d%%" \
+                    "$(head -c $i < /dev/zero | tr '\0' '-')" \
+                    "$i" $(( i * 100 / sleep_duration ))
                 sleep 1
             done
-            echo # move to new line after loop
+            echo
             ((count++))
             ret=1
-            # THRESHOLD=37.0
         else
             echo "System and Hardware clocks are synchronized!"
             echo "Offset is $offset s"

@@ -6,21 +6,28 @@ check_ptp_clocks_return_key() {
     echo "  1 -> Clocks were not synchronized but should be now for pi, jetson, and lidars"
     echo "  2 -> Error: Clocks are not synchronized or couldn't read clocks"
     echo "  3 -> PPS is not being read from GPS"
-    echo "  4 -> No static IP connection to $PI_HOSTNAME"
+    echo "  4 -> PPS is not being read from GPS, but clocks are synchronized"
+    echo "  5 -> No static IP connection to $PI_HOSTNAME"
 }
 
 check_ptp_clocks()
 {
     local ret=0
     local count=1
+    local MAX_COUNT=2
+
+    if [[ -z $PI_HOSTNAME ]]; then
+        echo "Need to set the PI_HOSTNAME variable first!"
+        return 5
+    fi
 
     if [[ $HOSTNAME != $PI_HOSTNAME ]]; then
         echo "Connecting to $PI_HOSTNAME via SSH..."
-        ssh yride@$PI_STATIC_IP "bash -lc 'source ~/yride_env_setup/custom_env.sh; check_ptp_clocks'" || { echo "SSH connection failed."; return 4; }
+        ssh yride@$PI_STATIC_IP "bash -lc 'source ~/yride_env_setup/custom_env.sh; check_ptp_clocks'" || { echo "SSH connection failed."; return 5; }
         ret=$?
         if [[ $ret -eq 255 ]]; then
             echo "SSH connection failed."
-            return 4
+            return 5
         fi
         return $ret
     fi
@@ -30,23 +37,24 @@ check_ptp_clocks()
     if [[ "$active_source" == "PPS" ]]; then
         echo "✅ PPS is active"
     else
-        ret=3
+        ret=4
         echo "❌ PPS is NOT active. Either no GPS is being received or there is another issue."
         if [[ $- == *i* ]]; then # Check to see if terminal is interactive
             read -p "Proceed? [y/N]: " answer
             answer=${answer:-n}
         else
-            answer=n
+            answer=y
         fi
 
         if [[ $answer != [Yy] ]]; then
             echo "Cancelled."
-            return $ret
+            return 3
         fi
             
     fi
 
-    THRESHOLD=37.0 # seconds
+    LEAP_SECOND=37 
+    THRESHOLD=0.5 # seconds
     sleep_duration=20
 
     
@@ -67,15 +75,15 @@ check_ptp_clocks()
         echo "PHC - System = $diff seconds"
 
         # Absolute offset (still pure awk)
-        offset=$(awk -v x="$diff" 'BEGIN{print (x<0? -x : x)}')
-        echo "Offset: $offset, Threshold: $THRESHOLD"
+        offset=$(awk -v x="$diff" -v l="$LEAP_SECOND" 'BEGIN{print (x<0? -x : x) - l}')
+        echo "Offset: $offset (with one leap second, $LEAP_SECOND s, subtracted)"
 
         # Numerical comparison (no bc needed)
-        greater=$(awk -v o="$offset" -v t="$THRESHOLD" 'BEGIN{print (o > t)}')
+        greater=$(awk -v o="$offset" -v t="$THRESHOLD" 'BEGIN{print (o > t || o < -t)}')
 
         if [[ "$greater" -eq 1 ]]; then
-            echo "Offset too large! (threshold is $THRESHOLD)"
-            if [[ "$count" -gt 5 ]]; then
+            echo "Absolute offset too large! (threshold is $THRESHOLD)"
+            if [[ "$count" -gt $MAX_COUNT ]]; then
                 echo "ERROR: Couldn't synchronize clocks after $((count - 1)) attempts. Exiting"
                 return 2
             fi
@@ -97,7 +105,6 @@ check_ptp_clocks()
             ret=1
         else
             echo "System and Hardware clocks are synchronized!"
-            echo "Offset is $offset s"
             break
         fi
     done
@@ -106,7 +113,7 @@ check_ptp_clocks()
         echo "Clock sync failed AT LEAST once. "
         echo "Resetting Jetson ptp, phc2shm, and chrony services..."
 
-        ssh yride@$JETSON_STATIC_IP "bash -c 'source ~/yride_env_setup/custom_env.sh; restart_computer_ptp'" || { echo "SSH to Jetson failed"; }
+        ssh -o StrictHostKeyChecking=accept-new yride@$JETSON_STATIC_IP "bash -c 'source ~/yride_env_setup/custom_env.sh; restart_computer_ptp'" || { echo "SSH to Jetson failed"; }
 
         echo "Resetting services complete. "
         echo "Resetting ouster lidar ptp..."
@@ -122,11 +129,16 @@ check_ptp_clocks()
 
 # This condition is true if the script is executed, false if sourced
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    # Script is being run directly, not sourced
-    check_ptp_clocks
-    var=$?
+    echo  "Script is being run directly, not sourced"
+    
+    source /home/yride/yride_env_setup/Sensors/sensor_ip.sh
+    source /home/yride/yride_env_setup/Other/hostname_colors.sh
+    source /home/yride/yride_env_setup/Sensors/restart_ouster_ptp.sh
 
-    echo "var = $var"
+    check_ptp_clocks
+    var="$?"
+
+    echo "returned: $var"
 
     if [[ $var -eq 0 ]]; then
         echo "✅ Clock sync OK"
@@ -134,6 +146,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         echo "Clock sync failed AT LEAST once. Need to reset Jetson and Ouster Lidars"
     elif [[ $var -eq 3 ]]; then
         echo "PPS is not being received. Check"
+    elif [[ $var -eq 4 ]]; then
+        echo "Clocks are synced but there is no PPS"
     else
         echo "❌ Clock sync FAILED"
     fi

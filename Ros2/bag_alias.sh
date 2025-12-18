@@ -25,7 +25,7 @@ show_help() {
     echo "  --all-custom           Record all custom-defined topics (all Ouster, Inertial Sense, and Other topics)"
     echo "  --other-only           Record all topic specified in INERTIAL_SENSE_TOPICS and OTHER_TOPICS"
     echo "  -o <file_path>         Specify the output path for the bag file. If this is not used, a bag"
-    ecoh "                           name will be automatically created with the format MM_DD_YYY"
+    echo "                           name will be automatically created with the format MM_DD_YYY"
     echo "  --no-topic-monitor     Disable topic synchronization check before playing the bag"
     echo "  -h, --help             Display this help message and exit"
     echo ""
@@ -37,6 +37,29 @@ show_help() {
 
 # Function to record topics based on flags
 record_bag() {
+
+    # Check to see if any of the parent directories are named bag or bags.
+    # If not, ask if they want to continue.
+    found=false
+    dir="$PWD"
+
+    while [[ "$dir" != "/" ]]; do
+        base="$(basename "$dir")"
+        shopt -s nocasematch
+        if [[ "$base" == "bag" || "$base" == "bags" ]]; then
+            found=true
+            break
+        fi
+        shopt -u nocasematch
+        dir="$(dirname "$dir")"
+    done
+
+    if ! $found; then
+        read -rp "No parent directory named bag or bags. Continue? ([y]/n) " ans
+        ans=${ans:-y}
+        [[ "$ans" != [Yy]* ]] && return 1
+    fi
+
     local topics=()
     local output_path=""
     local all_topics_flag=false # Flag to indicate if --all-topics was used (ros2 bag record -a)

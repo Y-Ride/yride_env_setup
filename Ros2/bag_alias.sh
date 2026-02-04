@@ -286,7 +286,7 @@ record_bag() {
                 read -p "Notes: " notes_entry
                 
                 # Create the new table row
-                local new_row="<tr><td>${date_time_entry}</td><td>${bag_size}</td><td>${bag_duration}></td><td>${location_entry}</td><td>${notes_entry}</td></tr>"
+                local new_row="<tr><td>${date_time_entry}</td><td>${bag_size}</td><td>${bag_duration}</td><td>${location_entry}</td><td>${notes_entry}</td></tr>"
 
                 # Use sed to insert the new row before the </tbody> tag
                 # sed -i "/<\/tbody><\/table>/i$new_row" $field_test_table_path
